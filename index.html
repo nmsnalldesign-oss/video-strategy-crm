@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Video Strategy CRM</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Рабочая область на двоих</p>
+        <h1>Video Strategy CRM</h1>
+      </div>
+      <div class="topbar__actions">
+        <span class="sync-pill" id="syncState">Локальный режим</span>
+        <button class="ghost-button" id="settingsButton" type="button">Настройки</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="composer-panel">
+        <form id="ideaForm" class="idea-form">
+          <div class="form-heading">
+            <div>
+              <p class="eyebrow">Новая плашка</p>
+              <h2 id="formTitle">Собрать идею</h2>
+            </div>
+            <button class="ghost-button is-hidden" id="cancelEditButton" type="button">Отмена</button>
+          </div>
+
+          <label>
+            Название
+            <input name="title" placeholder="Например: ночной проезд под припев">
+          </label>
+
+          <label>
+            Референс Instagram / TikTok / YouTube
+            <input name="referenceUrl" type="url" placeholder="https://www.instagram.com/reel/...">
+          </label>
+
+          <label>
+            Трек
+            <input name="track" placeholder="Название трека или ссылка">
+          </label>
+
+          <label>
+            Кто делает
+            <input name="assignee" placeholder="Например: Ваня">
+          </label>
+
+          <label>
+            Сценарий
+            <textarea name="script" rows="7" placeholder="Кадр 1: ...&#10;Кадр 2: ...&#10;Финал: ..."></textarea>
+          </label>
+
+          <label>
+            Описание / стратегия
+            <textarea name="notes" rows="5" placeholder="Что проверяем, почему может залететь, какие риски"></textarea>
+          </label>
+
+          <label>
+            Раскадровка / картинки
+            <input name="attachments" type="file" accept="image/*" multiple>
+          </label>
+
+          <button class="primary-button" type="submit" id="submitButton">Добавить идею</button>
+          <p class="form-error" id="formError" role="alert"></p>
+        </form>
+      </aside>
+
+      <section class="workspace">
+        <section class="stats" aria-label="Статистика">
+          <article>
+            <span id="totalCount">0</span>
+            <p>всего идей</p>
+          </article>
+          <article>
+            <span id="activeCount">0</span>
+            <p>в работе</p>
+          </article>
+          <article>
+            <span id="landedCount">0</span>
+            <p>залетело</p>
+          </article>
+          <article>
+            <span id="successRate">0%</span>
+            <p>успех после тестов</p>
+          </article>
+        </section>
+
+        <section class="toolbar" aria-label="Фильтры">
+          <input id="searchInput" type="search" placeholder="Поиск по ссылке, сценарию, треку">
+          <div class="status-tabs" id="statusTabs"></div>
+          <div class="toolbar__actions">
+            <button class="ghost-button" id="exportButton" type="button">Экспорт</button>
+            <label class="ghost-button file-button">
+              Импорт
+              <input id="importInput" type="file" accept="application/json">
+            </label>
+          </div>
+        </section>
+
+        <section class="idea-grid" id="ideaGrid" aria-live="polite"></section>
+      </section>
+    </main>
+
+    <dialog class="settings-dialog" id="settingsDialog">
+      <form method="dialog" class="settings">
+        <div class="form-heading">
+          <div>
+            <p class="eyebrow">Онлайн режим</p>
+            <h2>Общая комната</h2>
+          </div>
+          <button class="ghost-button" value="close" type="submit">Закрыть</button>
+        </div>
+
+        <label>
+          ID комнаты
+          <div class="inline-field">
+            <input id="roomIdInput" placeholder="vanya-strategy">
+            <button class="ghost-button" id="generateRoomButton" type="button">Сгенерировать</button>
+          </div>
+        </label>
+
+        <label>
+          Где хранить общую базу
+          <select id="providerInput">
+            <option value="supabase">Supabase через GitHub</option>
+            <option value="firebase">Firebase через Google</option>
+          </select>
+        </label>
+
+        <div id="supabaseSettings">
+          <label>
+            Supabase Project URL
+            <input id="supabaseUrlInput" placeholder="https://xxxxx.supabase.co">
+          </label>
+
+          <label>
+            Supabase anon public key
+            <textarea id="supabaseAnonKeyInput" rows="4" placeholder="eyJhbGciOiJIUzI1NiIs..."></textarea>
+          </label>
+        </div>
+
+        <label id="firebaseSettings">
+          Firebase config JSON
+          <textarea id="firebaseConfigInput" rows="8" placeholder='{"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
+        </label>
+
+        <div class="settings-actions">
+          <button class="primary-button" id="saveSettingsButton" type="button">Сохранить и подключить</button>
+          <button class="ghost-button" id="copyShareLinkButton" type="button">Скопировать ссылку другу</button>
+        </div>
+
+        <p class="settings-note">
+          Без Firebase приложение работает локально в браузере. С Firebase данные живут онлайн 24/7, а другу не нужен аккаунт.
+        </p>
+        <p class="form-error" id="settingsError" role="alert"></p>
+      </form>
+    </dialog>
+
+    <template id="emptyTemplate">
+      <div class="empty-state">
+        <h2>Пока нет плашек</h2>
+        <p>Добавь первую ссылку на референс, сценарий и раскадровку. Она появится тут отдельной карточкой.</p>
+      </div>
+    </template>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
