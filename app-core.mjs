@@ -1,7 +1,7 @@
 export const STATUSES = [
   { id: "idea", label: "Идея" },
-  { id: "taken", label: "Взял" },
-  { id: "trying", label: "Пробует" },
+  { id: "taken", label: "Взял в реализацию" },
+  { id: "trying", label: "Буду пробовать" },
   { id: "tried", label: "Попробовал" },
   { id: "landed", label: "Залетело" },
   { id: "missed", label: "Не залетело" }

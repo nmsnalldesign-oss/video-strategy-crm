@@ -6,6 +6,7 @@ import {
   DEFAULT_SYNC_SETTINGS,
   filterIdeas,
   getBoardSummary,
+  getStatusLabel,
   normalizeSyncSettings,
   parseBoard,
   resolveInitialCloudIdeas,
@@ -54,6 +55,11 @@ test("updateIdeaStatus changes only allowed statuses", () => {
   assert.equal(updated.status, "landed");
   assert.equal(updated.updatedAt, "2026-06-20T00:00:00.000Z");
   assert.throws(() => updateIdeaStatus(idea, "done"), /неизвестный статус/i);
+});
+
+test("status labels use executor-friendly wording", () => {
+  assert.equal(getStatusLabel("taken"), "Взял в реализацию");
+  assert.equal(getStatusLabel("trying"), "Буду пробовать");
 });
 
 test("filterIdeas supports search and status", () => {

@@ -28,3 +28,13 @@ test("html exposes Russian role selection and removes decorative menu tabs", asy
     assert.doesNotMatch(html, /Dashboard<\/a>|Sync room|Ideas board|Content Command Center|Strategy Board|Ideas market/);
   }
 });
+
+test("html exposes role dock and cache-busts app script", async () => {
+  const rootHtml = await readFile("index.html", "utf8");
+  const publicHtml = await readFile("public/index.html", "utf8");
+
+  for (const html of [rootHtml, publicHtml]) {
+    assert.match(html, /role-dock/);
+    assert.match(html, /app\.js\?v=ux-\d+/);
+  }
+});

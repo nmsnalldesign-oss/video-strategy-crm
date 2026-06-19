@@ -12,7 +12,7 @@ import {
   shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
-} from "./app-core.mjs?v=sync-20260619";
+} from "./app-core.mjs?v=ux-20260619";
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
@@ -51,6 +51,8 @@ const elements = {
   appShell: document.querySelector("#appShell"),
   roleAdminButton: document.querySelector("#roleAdminButton"),
   roleExecutorButton: document.querySelector("#roleExecutorButton"),
+  dockAdminButton: document.querySelector("#dockAdminButton"),
+  dockExecutorButton: document.querySelector("#dockExecutorButton"),
   roleSwitchButton: document.querySelector("#roleSwitchButton"),
   currentRoleLabel: document.querySelector("#currentRoleLabel"),
   form: document.querySelector("#ideaForm"),
@@ -108,6 +110,8 @@ async function init() {
 function bindEvents() {
   elements.roleAdminButton.addEventListener("click", () => setRole("admin"));
   elements.roleExecutorButton.addEventListener("click", () => setRole("executor"));
+  elements.dockAdminButton.addEventListener("click", () => setRole("admin"));
+  elements.dockExecutorButton.addEventListener("click", () => setRole("executor"));
   elements.roleSwitchButton.addEventListener("click", () => setRole(""));
   elements.form.addEventListener("submit", handleSubmit);
   elements.cancelEditButton.addEventListener("click", stopEditing);
@@ -147,6 +151,8 @@ function applyRole(role) {
   elements.roleGate.classList.toggle("is-hidden", Boolean(role));
   elements.appShell.classList.toggle("is-locked", !role);
   elements.currentRoleLabel.textContent = role === "admin" ? "Админ ТЗ" : role === "executor" ? "Исполнитель" : "Не выбран";
+  elements.dockAdminButton.classList.toggle("is-active", role === "admin");
+  elements.dockExecutorButton.classList.toggle("is-active", role === "executor");
 }
 
 function loadRole() {
@@ -192,6 +198,7 @@ async function handleSubmit(event) {
 function render() {
   const filtered = sortIdeas(filterIdeas(state.ideas, state.filter), state.filter.sort);
   const summary = getBoardSummary(state.ideas);
+  renderStatusTabs(summary);
 
   elements.totalCount.textContent = summary.total;
   elements.activeCount.textContent = summary.active;
@@ -223,14 +230,17 @@ function sortIdeas(ideas, sort) {
   return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
-function renderStatusTabs() {
-  const tabs = [{ id: "all", label: "Все идеи" }, ...STATUSES];
+function renderStatusTabs(summary = getBoardSummary(state.ideas)) {
+  const tabs = [{ id: "all", label: "Все идеи", count: summary.total }, ...STATUSES.map((status) => ({
+    ...status,
+    count: summary.byStatus[status.id] ?? 0
+  }))];
   elements.statusTabs.replaceChildren(
     ...tabs.map((status) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "status-button";
-      button.textContent = status.label;
+      button.innerHTML = `<span>${escapeHtml(status.label)}</span><strong>${status.count}</strong>`;
       button.dataset.status = status.id;
       button.addEventListener("click", () => {
         state.filter.status = status.id;
@@ -239,7 +249,7 @@ function renderStatusTabs() {
         });
         render();
       });
-      if (status.id === "all") button.classList.add("is-active");
+      if (status.id === state.filter.status) button.classList.add("is-active");
       return button;
     })
   );
@@ -250,24 +260,30 @@ function renderIdeaCard(idea) {
   card.className = `idea-card status-${idea.status}`;
 
   const link = idea.referenceUrl
-    ? `<a href="${escapeAttribute(idea.referenceUrl)}" target="_blank" rel="noreferrer">Открыть референс</a>`
+    ? `<a class="reference-button" href="${escapeAttribute(idea.referenceUrl)}" target="_blank" rel="noreferrer">Открыть ссылку</a>`
     : "";
 
   card.innerHTML = `
     <div class="idea-card__header">
       <div>
         <h3>${escapeHtml(idea.title)}</h3>
-        ${link}
       </div>
       <span class="badge">${escapeHtml(getStatusLabel(idea.status))}</span>
     </div>
-    <div class="meta-row">
-      ${idea.track ? `<span>Трек: ${escapeHtml(idea.track)}</span>` : ""}
-      ${idea.assignee ? `<span>Делает: ${escapeHtml(idea.assignee)}</span>` : ""}
-      <span>Обновлено: ${formatDate(idea.updatedAt)}</span>
+    <div class="idea-card__body">
+      <div class="idea-card__text">
+        <div class="meta-row">
+          ${idea.track ? `<span>Трек: ${escapeHtml(idea.track)}</span>` : ""}
+          ${idea.assignee ? `<span>Делает: ${escapeHtml(idea.assignee)}</span>` : ""}
+          <span>Обновлено: ${formatDate(idea.updatedAt)}</span>
+        </div>
+        ${idea.script ? `<p><strong>Сценарий</strong><br>${escapeHtml(idea.script)}</p>` : ""}
+        ${idea.notes ? `<p><strong>Стратегия</strong><br>${escapeHtml(idea.notes)}</p>` : ""}
+      </div>
+      <div class="idea-card__side">
+        ${link}
+      </div>
     </div>
-    ${idea.script ? `<p><strong>Сценарий</strong><br>${escapeHtml(idea.script)}</p>` : ""}
-    ${idea.notes ? `<p><strong>Стратегия</strong><br>${escapeHtml(idea.notes)}</p>` : ""}
   `;
 
   if (idea.attachments.length) {
@@ -563,6 +579,10 @@ async function copyShareLink() {
     sbUrl: supabaseUrl ? toBase64Url(supabaseUrl) : "",
     sbKey: supabaseAnonKey ? toBase64Url(supabaseAnonKey) : ""
   }).toString();
+
+  if (provider === "supabase" && roomId === "vanya-strategy") {
+    url.hash = "";
+  }
 
   await navigator.clipboard.writeText(url.toString());
   elements.settingsError.textContent = "Ссылка скопирована.";
