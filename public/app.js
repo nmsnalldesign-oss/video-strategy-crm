@@ -12,12 +12,12 @@ import {
   shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
-} from "./app-core.mjs?v=collapse-20260619";
+} from "./app-core.mjs?v=collapse-2-20260619";
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
 const ROLE_KEY = "content-crm-role";
-const EXPANDED_KEY = "content-crm-expanded";
+const EXPANDED_KEY = "content-crm-expanded-v2";
 
 const STATUS_SORT_WEIGHT = {
   taken: 1,
@@ -288,7 +288,7 @@ function renderIdeaCard(idea) {
   card.innerHTML = `
     <div class="idea-card__header">
       <button class="collapse-toggle" type="button" aria-expanded="${isExpanded}" aria-label="${isExpanded ? "Свернуть ТЗ" : "Развернуть ТЗ"}">
-        <span>&gt;</span>
+        <span aria-hidden="true"></span>
       </button>
       <div class="idea-card__title">
         <h3>${escapeHtml(idea.title)}</h3>
