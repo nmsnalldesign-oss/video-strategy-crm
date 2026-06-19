@@ -7,92 +7,65 @@
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Рабочая область на двоих</p>
-        <h1>Video Strategy CRM</h1>
-      </div>
-      <div class="topbar__actions">
-        <span class="sync-pill" id="syncState">Локальный режим</span>
-        <button class="ghost-button" id="settingsButton" type="button">Настройки</button>
-      </div>
-    </header>
-
-    <main class="layout">
-      <aside class="composer-panel">
-        <form id="ideaForm" class="idea-form">
-          <div class="form-heading">
-            <div>
-              <p class="eyebrow">Новая плашка</p>
-              <h2 id="formTitle">Собрать идею</h2>
-            </div>
-            <button class="ghost-button is-hidden" id="cancelEditButton" type="button">Отмена</button>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-row">
+          <div class="brand-mark">VS</div>
+          <div>
+            <p class="brand-name">Video Strategy</p>
+            <p class="brand-subtitle">Reference CRM</p>
           </div>
+        </div>
 
-          <label>
-            Название
-            <input name="title" placeholder="Например: ночной проезд под припев">
-          </label>
-
-          <label>
-            Референс Instagram / TikTok / YouTube
-            <input name="referenceUrl" type="url" placeholder="https://www.instagram.com/reel/...">
-          </label>
-
-          <label>
-            Трек
-            <input name="track" placeholder="Название трека или ссылка">
-          </label>
-
-          <label>
-            Кто делает
-            <input name="assignee" placeholder="Например: Ваня">
-          </label>
-
-          <label>
-            Сценарий
-            <textarea name="script" rows="7" placeholder="Кадр 1: ...&#10;Кадр 2: ...&#10;Финал: ..."></textarea>
-          </label>
-
-          <label>
-            Описание / стратегия
-            <textarea name="notes" rows="5" placeholder="Что проверяем, почему может залететь, какие риски"></textarea>
-          </label>
-
-          <label>
-            Раскадровка / картинки
-            <input name="attachments" type="file" accept="image/*" multiple>
-          </label>
-
-          <button class="primary-button" type="submit" id="submitButton">Добавить идею</button>
-          <p class="form-error" id="formError" role="alert"></p>
-        </form>
-      </aside>
-
-      <section class="workspace">
-        <section class="stats" aria-label="Статистика">
-          <article>
-            <span id="totalCount">0</span>
-            <p>всего идей</p>
-          </article>
-          <article>
-            <span id="activeCount">0</span>
-            <p>в работе</p>
-          </article>
-          <article>
-            <span id="landedCount">0</span>
-            <p>залетело</p>
-          </article>
-          <article>
-            <span id="successRate">0%</span>
-            <p>успех после тестов</p>
-          </article>
+        <section class="welcome-card">
+          <p class="eyebrow">Рабочая область</p>
+          <h1>Идеи, сценарии, тесты</h1>
+          <p>Ссылки на референсы, раскадровки и статусы в одном темном dashboard.</p>
         </section>
 
-        <section class="toolbar" aria-label="Фильтры">
-          <input id="searchInput" type="search" placeholder="Поиск по ссылке, сценарию, треку">
-          <div class="status-tabs" id="statusTabs"></div>
-          <div class="toolbar__actions">
+        <nav class="side-nav" aria-label="Разделы">
+          <p>Overview</p>
+          <a class="is-active" href="#ideaForm"><span>▦</span> Dashboard</a>
+          <a href="#ideaGrid"><span>◇</span> Ideas board</a>
+          <a href="#settingsButton"><span>◎</span> Sync room</a>
+          <p>Activity</p>
+          <a href="#statusTabs"><span>↗</span> Status flow</a>
+          <a href="#exportButton"><span>⇅</span> Export / Import</a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <span class="sync-pill" id="syncState">Локальный режим</span>
+          <button class="ghost-button" id="settingsButton" type="button">Настройки</button>
+        </div>
+      </aside>
+
+      <section class="main-stage">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Overview / Dashboard</p>
+            <h2>Content Command Center</h2>
+          </div>
+          <input id="searchInput" type="search" placeholder="Search references, tracks, scripts...">
+        </header>
+
+        <section class="ticker" aria-label="Быстрый статус">
+          <span>Ideas pipeline</span>
+          <strong id="totalCount">0</strong>
+          <span>In progress</span>
+          <strong id="activeCount">0</strong>
+          <span>Landed</span>
+          <strong id="landedCount">0</strong>
+          <span>Success rate</span>
+          <strong id="successRate">0%</strong>
+        </section>
+
+        <section class="hero-panel">
+          <div>
+            <p class="live-dot">Last update: live sync</p>
+            <h2>Strategy Board</h2>
+            <p>Каждая плашка — отдельная гипотеза: референс, трек, сценарий, картинки и результат теста.</p>
+          </div>
+          <div class="hero-actions">
             <button class="ghost-button" id="exportButton" type="button">Экспорт</button>
             <label class="ghost-button file-button">
               Импорт
@@ -101,7 +74,71 @@
           </div>
         </section>
 
-        <section class="idea-grid" id="ideaGrid" aria-live="polite"></section>
+        <section class="content-grid">
+          <aside class="composer-panel">
+            <form id="ideaForm" class="idea-form">
+              <div class="form-heading">
+                <div>
+                  <p class="eyebrow">Новая плашка</p>
+                  <h2 id="formTitle">Собрать идею</h2>
+                </div>
+                <button class="ghost-button is-hidden" id="cancelEditButton" type="button">Отмена</button>
+              </div>
+
+              <label>
+                Название
+                <input name="title" placeholder="Ночной проезд под припев">
+              </label>
+
+              <label>
+                Референс Instagram / TikTok / YouTube
+                <input name="referenceUrl" type="url" placeholder="https://www.instagram.com/reel/...">
+              </label>
+
+              <div class="form-split">
+                <label>
+                  Трек
+                  <input name="track" placeholder="Трек или ссылка">
+                </label>
+
+                <label>
+                  Кто делает
+                  <input name="assignee" placeholder="Ваня">
+                </label>
+              </div>
+
+              <label>
+                Сценарий
+                <textarea name="script" rows="7" placeholder="Кадр 1: ...&#10;Кадр 2: ...&#10;Финал: ..."></textarea>
+              </label>
+
+              <label>
+                Описание / стратегия
+                <textarea name="notes" rows="5" placeholder="Что проверяем, почему может залететь, какие риски"></textarea>
+              </label>
+
+              <label>
+                Раскадровка / картинки
+                <input name="attachments" type="file" accept="image/*" multiple>
+              </label>
+
+              <button class="primary-button" type="submit" id="submitButton">Добавить идею</button>
+              <p class="form-error" id="formError" role="alert"></p>
+            </form>
+          </aside>
+
+          <section class="workspace">
+            <section class="toolbar" aria-label="Фильтры">
+              <div>
+                <p class="eyebrow">Status filters</p>
+                <h3>Ideas market</h3>
+              </div>
+              <div class="status-tabs" id="statusTabs"></div>
+            </section>
+
+            <section class="idea-grid" id="ideaGrid" aria-live="polite"></section>
+          </section>
+        </section>
       </section>
     </main>
 
@@ -139,7 +176,7 @@
 
           <label>
             Supabase anon public key
-            <textarea id="supabaseAnonKeyInput" rows="4" placeholder="eyJhbGciOiJIUzI1NiIs..."></textarea>
+            <textarea id="supabaseAnonKeyInput" rows="4" placeholder="sb_publishable_..."></textarea>
           </label>
         </div>
 
@@ -154,7 +191,7 @@
         </div>
 
         <p class="settings-note">
-          Без Firebase приложение работает локально в браузере. С Firebase данные живут онлайн 24/7, а другу не нужен аккаунт.
+          Ссылка с Supabase-комнатой открывает одну общую доску у тебя и у друга.
         </p>
         <p class="form-error" id="settingsError" role="alert"></p>
       </form>
