@@ -12,7 +12,7 @@ import {
   shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
-} from "./app-core.mjs";
+} from "./app-core.mjs?v=sync-20260619";
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
