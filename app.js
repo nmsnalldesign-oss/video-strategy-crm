@@ -12,7 +12,7 @@ import {
   shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
-} from "./app-core.mjs?v=collapse-2-20260619";
+} from "./app-core.mjs?v=storage-fix-20260619";
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
@@ -177,7 +177,7 @@ function loadExpandedIds() {
 }
 
 function saveExpandedIds() {
-  localStorage.setItem(EXPANDED_KEY, JSON.stringify([...state.expandedIds]));
+  safeSetLocalStorage(EXPANDED_KEY, JSON.stringify([...state.expandedIds]));
 }
 
 async function handleSubmit(event) {
@@ -468,7 +468,16 @@ function loadLocalIdeas() {
 }
 
 function saveLocalIdeas(ideas) {
-  localStorage.setItem(STORAGE_KEY, serializeBoard(ideas));
+  if (safeSetLocalStorage(STORAGE_KEY, serializeBoard(ideas))) return;
+
+  const lightweightIdeas = ideas.map((idea) => ({ ...idea, attachments: [] }));
+  if (safeSetLocalStorage(STORAGE_KEY, serializeBoard(lightweightIdeas))) return;
+
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // The cloud copy is the source of truth when browser storage is full.
+  }
 }
 
 function loadSettings() {
@@ -481,7 +490,16 @@ function loadSettings() {
 
 function saveSettings(settings) {
   state.settings = settings;
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  safeSetLocalStorage(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function safeSetLocalStorage(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function saveSettingsFromDialog() {

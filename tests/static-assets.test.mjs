@@ -6,8 +6,8 @@ test("deployed html cache-busts stylesheet", async () => {
   const rootHtml = await readFile("index.html", "utf8");
   const publicHtml = await readFile("public/index.html", "utf8");
 
-  assert.match(rootHtml, /href="\.\/styles\.css\?v=mobile-polish-[\w-]+"/);
-  assert.match(publicHtml, /href="\.\/styles\.css\?v=mobile-polish-[\w-]+"/);
+  assert.match(rootHtml, /href="\.\/styles\.css\?v=storage-fix-[\w-]+"/);
+  assert.match(publicHtml, /href="\.\/styles\.css\?v=storage-fix-[\w-]+"/);
 });
 
 test("dashboard stylesheet contains app shell rules", async () => {
@@ -35,7 +35,17 @@ test("html exposes role dock and cache-busts app script", async () => {
 
   for (const html of [rootHtml, publicHtml]) {
     assert.match(html, /role-dock/);
-    assert.match(html, /app\.js\?v=mobile-polish-[\w-]+/);
+    assert.match(html, /app\.js\?v=storage-fix-[\w-]+/);
     assert.match(html, /imageDialog/);
+  }
+});
+
+test("app tolerates localStorage quota errors", async () => {
+  const app = await readFile("app.js", "utf8");
+  const publicApp = await readFile("public/app.js", "utf8");
+
+  for (const source of [app, publicApp]) {
+    assert.match(source, /function safeSetLocalStorage/);
+    assert.match(source, /attachments: \[\]/);
   }
 });
