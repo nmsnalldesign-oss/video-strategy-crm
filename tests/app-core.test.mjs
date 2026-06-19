@@ -59,7 +59,7 @@ test("updateIdeaStatus changes only allowed statuses", () => {
 
 test("status labels use executor-friendly wording", () => {
   assert.equal(getStatusLabel("taken"), "Взял в реализацию");
-  assert.equal(getStatusLabel("trying"), "Буду пробовать");
+  assert.equal(getStatusLabel("tried"), "Выложил");
 });
 
 test("filterIdeas supports search and status", () => {
@@ -95,6 +95,12 @@ test("serializeBoard and parseBoard preserve ideas safely", () => {
   assert.throws(() => parseBoard("{bad json"), /не удалось прочитать/i);
 });
 
+test("legacy trying status is normalized to taken", () => {
+  const parsed = parseBoard(JSON.stringify([{ title: "Legacy", status: "trying" }]));
+
+  assert.equal(parsed[0].status, "taken");
+});
+
 test("normalizeSyncSettings supports Supabase and Firebase modes", () => {
   assert.deepEqual(normalizeSyncSettings(), DEFAULT_SYNC_SETTINGS);
 
@@ -127,6 +133,11 @@ test("normalizeSyncSettings supports Supabase and Firebase modes", () => {
       supabaseUrl: "",
       supabaseAnonKey: ""
     }
+  );
+
+  assert.deepEqual(
+    normalizeSyncSettings({ provider: "firebase" }),
+    DEFAULT_SYNC_SETTINGS
   );
 });
 

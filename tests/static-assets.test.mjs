@@ -35,6 +35,6 @@ test("html exposes role dock and cache-busts app script", async () => {
 
   for (const html of [rootHtml, publicHtml]) {
     assert.match(html, /role-dock/);
-    assert.match(html, /app\.js\?v=ux-\d+/);
+    assert.match(html, /app\.js\?v=mobile-\d+/);
   }
 });

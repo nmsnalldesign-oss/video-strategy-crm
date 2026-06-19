@@ -12,16 +12,15 @@ import {
   shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
-} from "./app-core.mjs?v=ux-20260619";
+} from "./app-core.mjs?v=mobile-20260619";
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
 const ROLE_KEY = "content-crm-role";
 
 const STATUS_SORT_WEIGHT = {
-  trying: 1,
-  taken: 2,
-  tried: 3,
+  taken: 1,
+  tried: 2,
   idea: 4,
   landed: 5,
   missed: 6
@@ -31,8 +30,7 @@ const RESULT_SORT_WEIGHT = {
   landed: 1,
   missed: 2,
   tried: 3,
-  trying: 4,
-  taken: 5,
+  taken: 4,
   idea: 6
 };
 
@@ -268,7 +266,10 @@ function renderIdeaCard(idea) {
       <div>
         <h3>${escapeHtml(idea.title)}</h3>
       </div>
-      <span class="badge">${escapeHtml(getStatusLabel(idea.status))}</span>
+      <div class="badge-stack">
+        <span class="badge">${escapeHtml(getStatusLabel(idea.status))}</span>
+        ${idea.scaleRequested ? `<span class="badge scale-badge">Масштабируем</span>` : ""}
+      </div>
     </div>
     <div class="idea-card__body">
       <div class="idea-card__text">
@@ -310,6 +311,16 @@ function renderIdeaCard(idea) {
     actions.append(button);
   }
 
+  if (idea.status === "landed") {
+    const scaleButton = document.createElement("button");
+    scaleButton.type = "button";
+    scaleButton.className = "status-button scale-button";
+    scaleButton.textContent = idea.scaleRequested ? "Масштабируем" : "Масштабировать";
+    scaleButton.dataset.status = "scale";
+    scaleButton.addEventListener("click", () => toggleScale(idea.id));
+    actions.append(scaleButton);
+  }
+
   const editButton = document.createElement("button");
   editButton.type = "button";
   editButton.className = "status-button admin-only";
@@ -330,6 +341,13 @@ function renderIdeaCard(idea) {
 
 async function setStatus(id, status) {
   state.ideas = state.ideas.map((idea) => (idea.id === id ? updateIdeaStatus(idea, status) : idea));
+  await persistAndRender();
+}
+
+async function toggleScale(id) {
+  state.ideas = state.ideas.map((idea) =>
+    idea.id === id ? updateIdea(idea, { scaleRequested: !idea.scaleRequested }) : idea
+  );
   await persistAndRender();
 }
 

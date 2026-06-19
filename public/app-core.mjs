@@ -1,8 +1,7 @@
 export const STATUSES = [
   { id: "idea", label: "Идея" },
   { id: "taken", label: "Взял в реализацию" },
-  { id: "trying", label: "Буду пробовать" },
-  { id: "tried", label: "Попробовал" },
+  { id: "tried", label: "Выложил" },
   { id: "landed", label: "Залетело" },
   { id: "missed", label: "Не залетело" }
 ];
@@ -96,7 +95,7 @@ export function getBoardSummary(ideas) {
   return {
     total: ideas.length,
     byStatus,
-    active: byStatus.taken + byStatus.trying + byStatus.tried,
+    active: byStatus.taken + byStatus.tried,
     successRate
   };
 }
@@ -134,7 +133,8 @@ export function getStatusLabel(statusId) {
 }
 
 export function normalizeSyncSettings(settings = {}) {
-  const provider = settings.provider === "firebase" ? "firebase" : "supabase";
+  const hasFirebaseConfig = Boolean(clean(settings.firebaseConfigText));
+  const provider = settings.provider === "firebase" && hasFirebaseConfig ? "firebase" : "supabase";
 
   return {
     provider,
@@ -174,6 +174,7 @@ export function normalizeCloudIdeas(remoteIdeas) {
 
 function normalizeIdea(idea) {
   const createdAt = clean(idea.createdAt) || new Date().toISOString();
+  const status = clean(idea.status) === "trying" ? "taken" : clean(idea.status);
   return {
     id: clean(idea.id) || defaultId(),
     title: clean(idea.title) || "Без названия",
@@ -182,8 +183,9 @@ function normalizeIdea(idea) {
     script: clean(idea.script),
     notes: clean(idea.notes),
     assignee: clean(idea.assignee),
-    status: STATUS_IDS.has(idea.status) ? idea.status : "idea",
+    status: STATUS_IDS.has(status) ? status : "idea",
     attachments: normalizeAttachments(idea.attachments),
+    scaleRequested: Boolean(idea.scaleRequested),
     createdAt,
     updatedAt: clean(idea.updatedAt) || createdAt
   };
