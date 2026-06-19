@@ -7,6 +7,14 @@ export const STATUSES = [
   { id: "missed", label: "Не залетело" }
 ];
 
+export const DEFAULT_SYNC_SETTINGS = {
+  provider: "supabase",
+  roomId: "vanya-strategy",
+  firebaseConfigText: "",
+  supabaseUrl: "https://sibaqjistqhpxjnidyiv.supabase.co",
+  supabaseAnonKey: "sb_publishable_8eekRjcu3dhcQpJcUtVEjA_XX6dPtHG"
+};
+
 const STATUS_IDS = new Set(STATUSES.map((status) => status.id));
 
 export function createIdea(input = {}, deps = {}) {
@@ -130,11 +138,38 @@ export function normalizeSyncSettings(settings = {}) {
 
   return {
     provider,
-    roomId: clean(settings.roomId),
+    roomId: clean(settings.roomId) || DEFAULT_SYNC_SETTINGS.roomId,
     firebaseConfigText: clean(settings.firebaseConfigText),
-    supabaseUrl: clean(settings.supabaseUrl),
-    supabaseAnonKey: clean(settings.supabaseAnonKey)
+    supabaseUrl: provider === "supabase" ? clean(settings.supabaseUrl) || DEFAULT_SYNC_SETTINGS.supabaseUrl : clean(settings.supabaseUrl),
+    supabaseAnonKey: provider === "supabase" ? clean(settings.supabaseAnonKey) || DEFAULT_SYNC_SETTINGS.supabaseAnonKey : clean(settings.supabaseAnonKey)
   };
+}
+
+export function resolveInitialCloudIdeas(localIdeas, remoteIdeas) {
+  const local = Array.isArray(localIdeas) ? localIdeas.map(normalizeIdea) : [];
+
+  if (!Array.isArray(remoteIdeas)) {
+    return { ideas: local, shouldSaveLocal: local.length > 0 };
+  }
+
+  const remote = remoteIdeas.map(normalizeIdea);
+  if (!remote.length && local.length) {
+    return { ideas: local, shouldSaveLocal: true };
+  }
+
+  return { ideas: remote, shouldSaveLocal: false };
+}
+
+export function shouldAcceptRemoteIdeas(remoteIdeas) {
+  return Array.isArray(remoteIdeas);
+}
+
+export function normalizeCloudIdeas(remoteIdeas) {
+  if (!Array.isArray(remoteIdeas)) {
+    return [];
+  }
+
+  return remoteIdeas.map(normalizeIdea);
 }
 
 function normalizeIdea(idea) {

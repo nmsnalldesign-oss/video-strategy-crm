@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 
 import {
   createIdea,
+  DEFAULT_SYNC_SETTINGS,
   filterIdeas,
   getBoardSummary,
   normalizeSyncSettings,
   parseBoard,
+  resolveInitialCloudIdeas,
   serializeBoard,
   updateIdeaStatus
 } from "../public/app-core.mjs";
@@ -88,6 +90,8 @@ test("serializeBoard and parseBoard preserve ideas safely", () => {
 });
 
 test("normalizeSyncSettings supports Supabase and Firebase modes", () => {
+  assert.deepEqual(normalizeSyncSettings(), DEFAULT_SYNC_SETTINGS);
+
   assert.deepEqual(
     normalizeSyncSettings({
       provider: "supabase",
@@ -118,4 +122,23 @@ test("normalizeSyncSettings supports Supabase and Firebase modes", () => {
       supabaseAnonKey: ""
     }
   );
+});
+
+test("resolveInitialCloudIdeas seeds an empty cloud from local ideas", () => {
+  const local = [createIdea({ title: "Local draft" }, { now: fixedNow, makeId: () => "local" })];
+  const resolved = resolveInitialCloudIdeas(local, []);
+
+  assert.equal(resolved.shouldSaveLocal, true);
+  assert.equal(resolved.ideas.length, 1);
+  assert.equal(resolved.ideas[0].title, "Local draft");
+});
+
+test("resolveInitialCloudIdeas uses non-empty cloud as source of truth", () => {
+  const local = [createIdea({ title: "Local draft" }, { now: fixedNow, makeId: () => "local" })];
+  const remote = [createIdea({ title: "Remote card" }, { now: fixedNow, makeId: () => "remote" })];
+  const resolved = resolveInitialCloudIdeas(local, remote);
+
+  assert.equal(resolved.shouldSaveLocal, false);
+  assert.equal(resolved.ideas.length, 1);
+  assert.equal(resolved.ideas[0].title, "Remote card");
 });

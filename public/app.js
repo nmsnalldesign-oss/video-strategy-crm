@@ -4,9 +4,12 @@ import {
   filterIdeas,
   getBoardSummary,
   getStatusLabel,
+  normalizeCloudIdeas,
   normalizeSyncSettings,
   parseBoard,
+  resolveInitialCloudIdeas,
   serializeBoard,
+  shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
 } from "./app-core.mjs";
@@ -436,12 +439,16 @@ async function connectCloudIfReady() {
       unsubscribe: onSnapshot(ref, async (snapshot) => {
         const remoteIdeas = snapshot.exists() && Array.isArray(snapshot.data().ideas) ? snapshot.data().ideas : null;
 
-        if (remoteIdeas) {
+        if (shouldAcceptRemoteIdeas(remoteIdeas)) {
+          const resolved = resolveInitialCloudIdeas(state.ideas, remoteIdeas);
           state.applyingRemote = true;
-          state.ideas = parseBoard(JSON.stringify({ ideas: remoteIdeas }));
+          state.ideas = resolved.ideas;
           saveLocalIdeas(state.ideas);
           state.applyingRemote = false;
           render();
+          if (firstSnapshot && resolved.shouldSaveLocal) {
+            await state.cloud.save(state.ideas);
+          }
         } else if (firstSnapshot && state.ideas.length) {
           await state.cloud.save(state.ideas);
         }
@@ -467,12 +474,16 @@ async function connectSupabaseIfReady() {
       const { data, error } = await client.from("rooms").select("ideas").eq("id", state.settings.roomId).maybeSingle();
       if (error) throw error;
 
-      if (data?.ideas) {
+      if (shouldAcceptRemoteIdeas(data?.ideas)) {
+        const resolved = resolveInitialCloudIdeas(state.ideas, data.ideas);
         state.applyingRemote = true;
-        state.ideas = parseBoard(JSON.stringify({ ideas: data.ideas }));
+        state.ideas = resolved.ideas;
         saveLocalIdeas(state.ideas);
         state.applyingRemote = false;
         render();
+        if (resolved.shouldSaveLocal) {
+          await state.cloud.save(state.ideas);
+        }
       } else if (state.ideas.length) {
         await state.cloud.save(state.ideas);
       }
@@ -492,9 +503,9 @@ async function connectSupabaseIfReady() {
     const subscription = client
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${state.settings.roomId}` }, (payload) => {
-        if (payload.new?.ideas) {
+        if (shouldAcceptRemoteIdeas(payload.new?.ideas)) {
           state.applyingRemote = true;
-          state.ideas = parseBoard(JSON.stringify({ ideas: payload.new.ideas }));
+          state.ideas = normalizeCloudIdeas(payload.new.ideas);
           saveLocalIdeas(state.ideas);
           state.applyingRemote = false;
           render();
