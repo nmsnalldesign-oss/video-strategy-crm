@@ -6,8 +6,8 @@ test("deployed html cache-busts stylesheet", async () => {
   const rootHtml = await readFile("index.html", "utf8");
   const publicHtml = await readFile("public/index.html", "utf8");
 
-  assert.match(rootHtml, /href="\.\/styles\.css\?v=mobile-layout-[\w-]+"/);
-  assert.match(publicHtml, /href="\.\/styles\.css\?v=mobile-layout-[\w-]+"/);
+  assert.match(rootHtml, /href="\.\/styles\.css\?v=mobile-polish-[\w-]+"/);
+  assert.match(publicHtml, /href="\.\/styles\.css\?v=mobile-polish-[\w-]+"/);
 });
 
 test("dashboard stylesheet contains app shell rules", async () => {
@@ -35,7 +35,7 @@ test("html exposes role dock and cache-busts app script", async () => {
 
   for (const html of [rootHtml, publicHtml]) {
     assert.match(html, /role-dock/);
-    assert.match(html, /app\.js\?v=collapse-[\w-]+/);
+    assert.match(html, /app\.js\?v=mobile-polish-[\w-]+/);
     assert.match(html, /imageDialog/);
   }
 });
