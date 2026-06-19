@@ -13,17 +13,43 @@ import {
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
+const ROLE_KEY = "content-crm-role";
+
+const STATUS_SORT_WEIGHT = {
+  trying: 1,
+  taken: 2,
+  tried: 3,
+  idea: 4,
+  landed: 5,
+  missed: 6
+};
+
+const RESULT_SORT_WEIGHT = {
+  landed: 1,
+  missed: 2,
+  tried: 3,
+  trying: 4,
+  taken: 5,
+  idea: 6
+};
 
 const state = {
   ideas: [],
-  filter: { search: "", status: "all" },
+  filter: { search: "", status: "all", sort: "newest" },
   editingId: null,
+  role: loadRole(),
   cloud: null,
   applyingRemote: false,
   settings: loadSettings()
 };
 
 const elements = {
+  roleGate: document.querySelector("#roleGate"),
+  appShell: document.querySelector("#appShell"),
+  roleAdminButton: document.querySelector("#roleAdminButton"),
+  roleExecutorButton: document.querySelector("#roleExecutorButton"),
+  roleSwitchButton: document.querySelector("#roleSwitchButton"),
+  currentRoleLabel: document.querySelector("#currentRoleLabel"),
   form: document.querySelector("#ideaForm"),
   formTitle: document.querySelector("#formTitle"),
   submitButton: document.querySelector("#submitButton"),
@@ -33,6 +59,7 @@ const elements = {
   emptyTemplate: document.querySelector("#emptyTemplate"),
   searchInput: document.querySelector("#searchInput"),
   statusTabs: document.querySelector("#statusTabs"),
+  sortSelect: document.querySelector("#sortSelect"),
   totalCount: document.querySelector("#totalCount"),
   activeCount: document.querySelector("#activeCount"),
   landedCount: document.querySelector("#landedCount"),
@@ -65,8 +92,10 @@ async function init() {
   elements.supabaseUrlInput.value = state.settings.supabaseUrl;
   elements.supabaseAnonKeyInput.value = state.settings.supabaseAnonKey;
   elements.firebaseConfigInput.value = state.settings.firebaseConfigText;
-  renderProviderSettings();
+  elements.sortSelect.value = state.filter.sort;
 
+  applyRole(state.role);
+  renderProviderSettings();
   renderStatusTabs();
   bindEvents();
   render();
@@ -74,10 +103,17 @@ async function init() {
 }
 
 function bindEvents() {
+  elements.roleAdminButton.addEventListener("click", () => setRole("admin"));
+  elements.roleExecutorButton.addEventListener("click", () => setRole("executor"));
+  elements.roleSwitchButton.addEventListener("click", () => setRole(""));
   elements.form.addEventListener("submit", handleSubmit);
   elements.cancelEditButton.addEventListener("click", stopEditing);
   elements.searchInput.addEventListener("input", () => {
     state.filter.search = elements.searchInput.value;
+    render();
+  });
+  elements.sortSelect.addEventListener("change", () => {
+    state.filter.sort = elements.sortSelect.value;
     render();
   });
   elements.exportButton.addEventListener("click", exportBoard);
@@ -89,6 +125,30 @@ function bindEvents() {
   elements.providerInput.addEventListener("change", renderProviderSettings);
   elements.saveSettingsButton.addEventListener("click", saveSettingsFromDialog);
   elements.copyShareLinkButton.addEventListener("click", copyShareLink);
+}
+
+function setRole(role) {
+  state.role = role;
+  if (role) {
+    localStorage.setItem(ROLE_KEY, role);
+  } else {
+    localStorage.removeItem(ROLE_KEY);
+    stopEditing();
+  }
+  applyRole(role);
+}
+
+function applyRole(role) {
+  document.body.classList.toggle("role-admin", role === "admin");
+  document.body.classList.toggle("role-executor", role === "executor");
+  elements.roleGate.classList.toggle("is-hidden", Boolean(role));
+  elements.appShell.classList.toggle("is-locked", !role);
+  elements.currentRoleLabel.textContent = role === "admin" ? "Админ ТЗ" : role === "executor" ? "Исполнитель" : "Не выбран";
+}
+
+function loadRole() {
+  const role = localStorage.getItem(ROLE_KEY);
+  return role === "admin" || role === "executor" ? role : "";
 }
 
 async function handleSubmit(event) {
@@ -127,7 +187,7 @@ async function handleSubmit(event) {
 }
 
 function render() {
-  const filtered = filterIdeas(state.ideas, state.filter);
+  const filtered = sortIdeas(filterIdeas(state.ideas, state.filter), state.filter.sort);
   const summary = getBoardSummary(state.ideas);
 
   elements.totalCount.textContent = summary.total;
@@ -146,8 +206,22 @@ function render() {
   }
 }
 
+function sortIdeas(ideas, sort) {
+  const sorted = [...ideas];
+  if (sort === "oldest") {
+    return sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  }
+  if (sort === "active") {
+    return sorted.sort((a, b) => (STATUS_SORT_WEIGHT[a.status] ?? 99) - (STATUS_SORT_WEIGHT[b.status] ?? 99) || new Date(b.updatedAt) - new Date(a.updatedAt));
+  }
+  if (sort === "result") {
+    return sorted.sort((a, b) => (RESULT_SORT_WEIGHT[a.status] ?? 99) - (RESULT_SORT_WEIGHT[b.status] ?? 99) || new Date(b.updatedAt) - new Date(a.updatedAt));
+  }
+  return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
 function renderStatusTabs() {
-  const tabs = [{ id: "all", label: "Все" }, ...STATUSES];
+  const tabs = [{ id: "all", label: "Все идеи" }, ...STATUSES];
   elements.statusTabs.replaceChildren(
     ...tabs.map((status) => {
       const button = document.createElement("button");
@@ -170,7 +244,7 @@ function renderStatusTabs() {
 
 function renderIdeaCard(idea) {
   const card = document.createElement("article");
-  card.className = "idea-card";
+  card.className = `idea-card status-${idea.status}`;
 
   const link = idea.referenceUrl
     ? `<a href="${escapeAttribute(idea.referenceUrl)}" target="_blank" rel="noreferrer">Открыть референс</a>`
@@ -187,7 +261,7 @@ function renderIdeaCard(idea) {
     <div class="meta-row">
       ${idea.track ? `<span>Трек: ${escapeHtml(idea.track)}</span>` : ""}
       ${idea.assignee ? `<span>Делает: ${escapeHtml(idea.assignee)}</span>` : ""}
-      <span>${formatDate(idea.updatedAt)}</span>
+      <span>Обновлено: ${formatDate(idea.updatedAt)}</span>
     </div>
     ${idea.script ? `<p><strong>Сценарий</strong><br>${escapeHtml(idea.script)}</p>` : ""}
     ${idea.notes ? `<p><strong>Стратегия</strong><br>${escapeHtml(idea.notes)}</p>` : ""}
@@ -212,20 +286,21 @@ function renderIdeaCard(idea) {
     button.type = "button";
     button.className = "status-button";
     button.textContent = status.label;
+    button.dataset.status = status.id;
     button.addEventListener("click", () => setStatus(idea.id, status.id));
     actions.append(button);
   }
 
   const editButton = document.createElement("button");
   editButton.type = "button";
-  editButton.className = "status-button";
+  editButton.className = "status-button admin-only";
   editButton.textContent = "Править";
   editButton.addEventListener("click", () => startEditing(idea.id));
   actions.append(editButton);
 
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
-  deleteButton.className = "status-button";
+  deleteButton.className = "status-button admin-only";
   deleteButton.textContent = "Удалить";
   deleteButton.addEventListener("click", () => deleteIdea(idea.id));
   actions.append(deleteButton);
@@ -246,11 +321,12 @@ async function deleteIdea(id) {
 }
 
 function startEditing(id) {
+  if (state.role !== "admin") return;
   const idea = state.ideas.find((item) => item.id === id);
   if (!idea) return;
 
   state.editingId = id;
-  elements.formTitle.textContent = "Редактировать идею";
+  elements.formTitle.textContent = "Редактировать ТЗ";
   elements.submitButton.textContent = "Сохранить";
   elements.cancelEditButton.classList.remove("is-hidden");
   elements.form.elements.title.value = idea.title;
@@ -265,8 +341,8 @@ function startEditing(id) {
 function stopEditing() {
   state.editingId = null;
   elements.form.reset();
-  elements.formTitle.textContent = "Собрать идею";
-  elements.submitButton.textContent = "Добавить идею";
+  elements.formTitle.textContent = "Собрать ТЗ";
+  elements.submitButton.textContent = "Добавить ТЗ";
   elements.cancelEditButton.classList.add("is-hidden");
 }
 

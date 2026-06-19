@@ -41,7 +41,7 @@ test("createIdea trims fields and fills defaults", () => {
 test("createIdea requires a title or reference link", () => {
   assert.throws(
     () => createIdea({ title: " ", referenceUrl: " " }, { now: fixedNow, makeId: fixedId }),
-    /title or reference/i
+    /название или ссылка/i
   );
 });
 
@@ -51,7 +51,7 @@ test("updateIdeaStatus changes only allowed statuses", () => {
 
   assert.equal(updated.status, "landed");
   assert.equal(updated.updatedAt, "2026-06-20T00:00:00.000Z");
-  assert.throws(() => updateIdeaStatus(idea, "done"), /unknown status/i);
+  assert.throws(() => updateIdeaStatus(idea, "done"), /неизвестный статус/i);
 });
 
 test("filterIdeas supports search and status", () => {
@@ -84,7 +84,7 @@ test("serializeBoard and parseBoard preserve ideas safely", () => {
 
   assert.equal(parsed.length, 1);
   assert.equal(parsed[0].title, "Export me");
-  assert.throws(() => parseBoard("{bad json"), /could not parse/i);
+  assert.throws(() => parseBoard("{bad json"), /не удалось прочитать/i);
 });
 
 test("normalizeSyncSettings supports Supabase and Firebase modes", () => {

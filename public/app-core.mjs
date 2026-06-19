@@ -17,7 +17,7 @@ export function createIdea(input = {}, deps = {}) {
   const referenceUrl = clean(input.referenceUrl);
 
   if (!title && !referenceUrl) {
-    throw new Error("Idea needs a title or reference link.");
+    throw new Error("Нужно название или ссылка на референс.");
   }
 
   return normalizeIdea({
@@ -37,7 +37,7 @@ export function createIdea(input = {}, deps = {}) {
 
 export function updateIdeaStatus(idea, status, deps = {}) {
   if (!STATUS_IDS.has(status)) {
-    throw new Error(`Unknown status: ${status}`);
+    throw new Error(`Неизвестный статус: ${status}`);
   }
 
   const now = deps.now ?? (() => new Date().toISOString());
@@ -109,13 +109,13 @@ export function parseBoard(json) {
   let parsed;
   try {
     parsed = JSON.parse(json);
-  } catch (error) {
-    throw new Error("Could not parse board JSON.");
+  } catch {
+    throw new Error("Не удалось прочитать JSON доски.");
   }
 
   const ideas = Array.isArray(parsed) ? parsed : parsed?.ideas;
   if (!Array.isArray(ideas)) {
-    throw new Error("Could not parse board JSON: ideas array is missing.");
+    throw new Error("Не удалось прочитать JSON доски: нет массива ideas.");
   }
 
   return ideas.map(normalizeIdea);

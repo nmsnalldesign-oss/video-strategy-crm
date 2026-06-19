@@ -17,3 +17,14 @@ test("dashboard stylesheet contains app shell rules", async () => {
   assert.match(rootCss, /\.app-shell/);
   assert.match(publicCss, /\.app-shell/);
 });
+
+test("html exposes Russian role selection and removes decorative menu tabs", async () => {
+  const rootHtml = await readFile("index.html", "utf8");
+  const publicHtml = await readFile("public/index.html", "utf8");
+
+  for (const html of [rootHtml, publicHtml]) {
+    assert.match(html, /Админ ТЗ/);
+    assert.match(html, /Исполнитель/);
+    assert.doesNotMatch(html, /Dashboard<\/a>|Sync room|Ideas board|Content Command Center|Strategy Board|Ideas market/);
+  }
+});

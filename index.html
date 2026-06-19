@@ -3,69 +3,77 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Video Strategy CRM</title>
+    <title>Доска ТЗ для видео</title>
     <link rel="stylesheet" href="./styles.css?v=dashboard-20260619">
   </head>
   <body>
-    <main class="app-shell">
+    <section class="role-gate" id="roleGate" aria-labelledby="roleGateTitle">
+      <div class="role-card">
+        <p class="eyebrow">Выбор интерфейса</p>
+        <h1 id="roleGateTitle">Кто заходит в доску?</h1>
+        <p>Админ добавляет ТЗ и референсы. Исполнитель сразу видит карточки, берет задачи и отмечает результат.</p>
+        <div class="role-actions">
+          <button class="primary-button" id="roleAdminButton" type="button">Админ ТЗ</button>
+          <button class="ghost-button" id="roleExecutorButton" type="button">Исполнитель</button>
+        </div>
+      </div>
+    </section>
+
+    <main class="app-shell is-locked" id="appShell">
       <aside class="sidebar">
         <div class="brand-row">
-          <div class="brand-mark">VS</div>
+          <div class="brand-mark">ТЗ</div>
           <div>
-            <p class="brand-name">Video Strategy</p>
-            <p class="brand-subtitle">Reference CRM</p>
+            <p class="brand-name">Видео-доска</p>
+            <p class="brand-subtitle">референсы и сценарии</p>
           </div>
         </div>
 
         <section class="welcome-card">
           <p class="eyebrow">Рабочая область</p>
           <h1>Идеи, сценарии, тесты</h1>
-          <p>Ссылки на референсы, раскадровки и статусы в одном темном dashboard.</p>
+          <p>Каждая карточка - отдельная идея: ссылка, трек, сценарий, картинки и статус проверки.</p>
         </section>
 
-        <nav class="side-nav" aria-label="Разделы">
-          <p>Overview</p>
-          <a class="is-active" href="#ideaForm"><span>▦</span> Dashboard</a>
-          <a href="#ideaGrid"><span>◇</span> Ideas board</a>
-          <a href="#settingsButton"><span>◎</span> Sync room</a>
-          <p>Activity</p>
-          <a href="#statusTabs"><span>↗</span> Status flow</a>
-          <a href="#exportButton"><span>⇅</span> Export / Import</a>
-        </nav>
+        <section class="role-panel">
+          <p class="eyebrow">Текущий режим</p>
+          <strong id="currentRoleLabel">Не выбран</strong>
+          <button class="ghost-button" id="roleSwitchButton" type="button">Сменить роль</button>
+        </section>
 
-        <div class="sidebar-footer">
+        <div class="sidebar-footer admin-only">
           <span class="sync-pill" id="syncState">Локальный режим</span>
-          <button class="ghost-button" id="settingsButton" type="button">Настройки</button>
+          <button class="ghost-button" id="settingsButton" type="button">Настройки онлайн</button>
         </div>
       </aside>
 
       <section class="main-stage">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Overview / Dashboard</p>
-            <h2>Content Command Center</h2>
+            <p class="eyebrow">Доска идей</p>
+            <h2>Карточки ТЗ</h2>
           </div>
-          <input id="searchInput" type="search" placeholder="Search references, tracks, scripts...">
+          <input id="searchInput" type="search" placeholder="Поиск по идеям, трекам, сценарию...">
         </header>
 
-        <section class="ticker" aria-label="Быстрый статус">
-          <span>Ideas pipeline</span>
+        <section class="ticker" aria-label="Сводка по идеям">
+          <span>Всего идей</span>
           <strong id="totalCount">0</strong>
-          <span>In progress</span>
+          <span>В работе</span>
           <strong id="activeCount">0</strong>
-          <span>Landed</span>
+          <span>Залетело</span>
           <strong id="landedCount">0</strong>
-          <span>Success rate</span>
+          <span>Успех</span>
           <strong id="successRate">0%</strong>
         </section>
 
         <section class="hero-panel">
           <div>
-            <p class="live-dot">Last update: live sync</p>
-            <h2>Strategy Board</h2>
-            <p>Каждая плашка — отдельная гипотеза: референс, трек, сценарий, картинки и результат теста.</p>
+            <p class="live-dot">Живая синхронизация</p>
+            <h2>Все ТЗ в одном месте</h2>
+            <p>Исполнитель берет карточку, пробует формат и отмечает: залетело, не залетело или надо дожать.</p>
           </div>
-          <div class="hero-actions">
+          <div class="hero-actions admin-only">
             <button class="ghost-button" id="exportButton" type="button">Экспорт</button>
             <label class="ghost-button file-button">
               Импорт
@@ -75,19 +83,19 @@
         </section>
 
         <section class="content-grid">
-          <aside class="composer-panel">
+          <aside class="composer-panel admin-only">
             <form id="ideaForm" class="idea-form">
               <div class="form-heading">
                 <div>
-                  <p class="eyebrow">Новая плашка</p>
-                  <h2 id="formTitle">Собрать идею</h2>
+                  <p class="eyebrow">Новая карточка</p>
+                  <h2 id="formTitle">Собрать ТЗ</h2>
                 </div>
                 <button class="ghost-button is-hidden" id="cancelEditButton" type="button">Отмена</button>
               </div>
 
               <label>
                 Название
-                <input name="title" placeholder="Ночной проезд под припев">
+                <input name="title" placeholder="Например: ночной проезд под припев">
               </label>
 
               <label>
@@ -122,18 +130,26 @@
                 <input name="attachments" type="file" accept="image/*" multiple>
               </label>
 
-              <button class="primary-button" type="submit" id="submitButton">Добавить идею</button>
+              <button class="primary-button" type="submit" id="submitButton">Добавить ТЗ</button>
               <p class="form-error" id="formError" role="alert"></p>
             </form>
           </aside>
 
           <section class="workspace">
-            <section class="toolbar" aria-label="Фильтры">
+            <section class="toolbar" aria-label="Фильтры и сортировка">
               <div>
-                <p class="eyebrow">Status filters</p>
-                <h3>Ideas market</h3>
+                <p class="eyebrow">Фильтры</p>
+                <h3>Все идеи</h3>
               </div>
-              <div class="status-tabs" id="statusTabs"></div>
+              <div class="toolbar-controls">
+                <div class="status-tabs" id="statusTabs"></div>
+                <select id="sortSelect" class="sort-select" aria-label="Сортировка">
+                  <option value="newest">Сначала новые</option>
+                  <option value="oldest">Сначала старые</option>
+                  <option value="active">Сначала в работе</option>
+                  <option value="result">Сначала с результатом</option>
+                </select>
+              </div>
             </section>
 
             <section class="idea-grid" id="ideaGrid" aria-live="polite"></section>
@@ -163,8 +179,8 @@
         <label>
           Где хранить общую базу
           <select id="providerInput">
-            <option value="supabase">Supabase через GitHub</option>
-            <option value="firebase">Firebase через Google</option>
+            <option value="supabase">Supabase</option>
+            <option value="firebase">Firebase</option>
           </select>
         </label>
 
@@ -175,7 +191,7 @@
           </label>
 
           <label>
-            Supabase anon public key
+            Supabase publishable key
             <textarea id="supabaseAnonKeyInput" rows="4" placeholder="sb_publishable_..."></textarea>
           </label>
         </div>
@@ -191,7 +207,7 @@
         </div>
 
         <p class="settings-note">
-          Ссылка с Supabase-комнатой открывает одну общую доску у тебя и у друга.
+          Ссылка открывает одну общую доску у тебя и у друга.
         </p>
         <p class="form-error" id="settingsError" role="alert"></p>
       </form>
@@ -199,11 +215,11 @@
 
     <template id="emptyTemplate">
       <div class="empty-state">
-        <h2>Пока нет плашек</h2>
+        <h2>Пока нет карточек</h2>
         <p>Добавь первую ссылку на референс, сценарий и раскадровку. Она появится тут отдельной карточкой.</p>
       </div>
     </template>
 
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="./app.js?v=roles-20260619"></script>
   </body>
 </html>
