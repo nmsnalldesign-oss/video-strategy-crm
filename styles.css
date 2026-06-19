@@ -24,12 +24,16 @@
 
 html {
   background: var(--bg);
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   padding-bottom: 72px;
+  overflow-x: hidden;
   color: var(--ink);
   font: 15px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background:
@@ -117,6 +121,7 @@ a {
   background: rgba(5, 6, 10, 0.86);
   box-shadow: var(--shadow);
   backdrop-filter: blur(22px);
+  max-width: 100%;
 }
 
 .app-shell.is-locked {
@@ -231,6 +236,7 @@ a {
 
 .main-stage {
   min-width: 0;
+  max-width: 100%;
   background: linear-gradient(180deg, rgba(9, 10, 15, 0.82), rgba(5, 6, 8, 0.96));
 }
 
@@ -534,6 +540,12 @@ textarea:focus {
 .file-button {
   position: relative;
   overflow: hidden;
+  max-width: 100%;
+}
+
+.idea-card,
+.idea-card * {
+  min-width: 0;
 }
 
 .file-button input {
@@ -581,9 +593,36 @@ textarea:focus {
 .idea-card__header {
   position: relative;
   z-index: 1;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: start;
   gap: 14px;
+}
+
+.collapse-toggle {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--ink);
+  font-weight: 950;
+}
+
+.collapse-toggle span {
+  display: block;
+  transform: rotate(0deg);
+  transition: transform 0.16s ease;
+}
+
+.idea-card.is-expanded .collapse-toggle span {
+  transform: rotate(90deg);
+}
+
+.idea-card__title {
+  min-width: 0;
 }
 
 .idea-card h3 {
@@ -591,6 +630,26 @@ textarea:focus {
   font-size: 24px;
   line-height: 1.12;
   overflow-wrap: anywhere;
+}
+
+.idea-preview {
+  display: -webkit-box;
+  margin-top: 6px !important;
+  color: var(--muted) !important;
+  font-size: 13px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.idea-card.is-expanded .idea-preview {
+  display: none;
+}
+
+.idea-card.is-collapsed {
+  padding-top: 16px;
+  padding-bottom: 16px;
 }
 
 .idea-card__body {
@@ -638,8 +697,10 @@ textarea:focus {
   position: relative;
   z-index: 1;
   color: var(--muted-strong);
+  max-width: 100%;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .idea-card strong {
@@ -663,6 +724,7 @@ textarea:focus {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
+  max-width: 260px;
 }
 
 .scale-badge,
@@ -699,13 +761,28 @@ textarea:focus {
   gap: 9px;
 }
 
-.attachments img {
+.attachment-button {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 0;
+  overflow: hidden;
+  background: #10121a;
+}
+
+.attachment-button img {
+  display: block;
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
-  border-radius: var(--radius);
   border: 1px solid var(--line);
+  border-radius: var(--radius);
   background: #10121a;
+}
+
+.attachment-button:hover img {
+  border-color: rgba(139, 131, 255, 0.75);
 }
 
 .card-actions {
@@ -789,6 +866,42 @@ textarea:focus {
   border-radius: var(--radius);
   padding: 0;
   background: transparent;
+}
+
+.image-dialog {
+  width: min(960px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  border: 0;
+  border-radius: var(--radius);
+  padding: 46px 12px 12px;
+  background: rgba(8, 9, 14, 0.96);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.7);
+}
+
+.image-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.76);
+  backdrop-filter: blur(10px);
+}
+
+.image-dialog img {
+  display: block;
+  width: 100%;
+  max-height: calc(100vh - 96px);
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+
+.image-dialog__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+  padding: 6px 12px;
+  font-weight: 850;
 }
 
 .settings-dialog::backdrop {
@@ -887,6 +1000,11 @@ body.role-executor .topbar {
 }
 
 @media (max-width: 760px) {
+  body {
+    padding-bottom: 104px;
+    font-size: 14px;
+  }
+
   .role-actions {
     grid-template-columns: 1fr;
   }
@@ -897,6 +1015,7 @@ body.role-executor .topbar {
     margin: 0;
     border: 0;
     border-radius: 0;
+    overflow: hidden;
   }
 
   body.role-executor .app-shell {
@@ -908,8 +1027,15 @@ body.role-executor .topbar {
   .ticker,
   .hero-panel,
   .content-grid {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: 14px;
+    padding-right: 14px;
+    max-width: 100%;
+  }
+
+  .topbar {
+    min-height: auto;
+    padding-top: 14px;
+    padding-bottom: 12px;
   }
 
   .topbar,
@@ -922,10 +1048,22 @@ body.role-executor .topbar {
 
   .topbar input[type="search"] {
     width: 100%;
+    min-height: 44px;
+    font-size: 14px;
   }
 
   .ticker {
     grid-template-columns: repeat(4, max-content);
+    gap: 10px 14px;
+    min-height: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-size: 13px;
+    white-space: normal;
+  }
+
+  .ticker strong {
+    font-size: 17px;
   }
 
   .form-split {
@@ -933,37 +1071,188 @@ body.role-executor .topbar {
   }
 
   .hero-panel h2 {
-    font-size: 34px;
+    font-size: 28px;
     white-space: normal;
   }
 
   .hero-panel {
-    padding-top: 18px;
-    padding-bottom: 18px;
+    width: auto;
+    max-width: calc(100% - 28px);
+    margin: 14px;
+    padding: 16px;
+  }
+
+  .hero-panel p:not(.live-dot) {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .live-dot {
+    margin-bottom: 10px;
+    font-size: 13px;
   }
 
   .toolbar {
     align-items: stretch;
     flex-direction: column;
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 14px;
+    overflow: hidden;
+  }
+
+  .toolbar h3 {
+    font-size: 20px;
   }
 
   .toolbar-controls {
     align-items: stretch;
     flex-direction: column;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .status-tabs {
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    padding-bottom: 4px;
+    overflow-x: auto;
+  }
+
+  .status-tabs .status-button {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 13px;
   }
 
   .sort-select {
     max-width: 100%;
     flex-basis: auto;
+    width: 100%;
+    font-size: 14px;
   }
 
   .idea-grid,
   body.role-executor .idea-grid {
     grid-template-columns: 1fr;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .idea-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 16px 14px;
+    gap: 10px;
+  }
+
+  .idea-card::after {
+    display: none;
+  }
+
+  .idea-card__header {
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .collapse-toggle {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+
+  .idea-card h3 {
+    font-size: 20px;
+    line-height: 1.15;
+  }
+
+  .idea-preview {
+    font-size: 12px;
+  }
+
+  .badge-stack {
+    grid-column: 2;
+    justify-content: flex-start;
+    max-width: 100%;
+  }
+
+  .badge {
+    white-space: normal;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.2;
   }
 
   .idea-card__body {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .idea-card p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .idea-card p strong {
+    display: inline-block;
+    margin-bottom: 4px;
+    font-size: 16px;
+  }
+
+  .meta-row {
+    gap: 6px;
+  }
+
+  .meta-row span {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .reference-button {
+    width: 100%;
+    min-height: 40px;
+    font-size: 14px;
+  }
+
+  .attachments {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .card-actions .status-button {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px;
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .role-dock {
+    bottom: 12px;
+    width: calc(100vw - 28px);
+    justify-content: center;
+    gap: 6px;
+    padding: 7px;
+  }
+
+  .role-dock span {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .role-dock .ghost-button {
+    flex: 1;
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 13px;
   }
 }
 

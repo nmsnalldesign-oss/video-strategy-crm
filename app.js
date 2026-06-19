@@ -12,11 +12,12 @@ import {
   shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
-} from "./app-core.mjs?v=mobile-20260619";
+} from "./app-core.mjs?v=collapse-20260619";
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
 const ROLE_KEY = "content-crm-role";
+const EXPANDED_KEY = "content-crm-expanded";
 
 const STATUS_SORT_WEIGHT = {
   taken: 1,
@@ -39,6 +40,7 @@ const state = {
   filter: { search: "", status: "all", sort: "newest" },
   editingId: null,
   role: loadRole(),
+  expandedIds: loadExpandedIds(),
   cloud: null,
   applyingRemote: false,
   settings: loadSettings()
@@ -82,7 +84,10 @@ const elements = {
   saveSettingsButton: document.querySelector("#saveSettingsButton"),
   copyShareLinkButton: document.querySelector("#copyShareLinkButton"),
   settingsError: document.querySelector("#settingsError"),
-  syncState: document.querySelector("#syncState")
+  syncState: document.querySelector("#syncState"),
+  imageDialog: document.querySelector("#imageDialog"),
+  imageDialogPreview: document.querySelector("#imageDialogPreview"),
+  imageDialogClose: document.querySelector("#imageDialogClose")
 };
 
 hydrateSettingsFromHash();
@@ -130,6 +135,10 @@ function bindEvents() {
   elements.providerInput.addEventListener("change", renderProviderSettings);
   elements.saveSettingsButton.addEventListener("click", saveSettingsFromDialog);
   elements.copyShareLinkButton.addEventListener("click", copyShareLink);
+  elements.imageDialogClose.addEventListener("click", closeImagePreview);
+  elements.imageDialog.addEventListener("click", (event) => {
+    if (event.target === elements.imageDialog) closeImagePreview();
+  });
 }
 
 function setRole(role) {
@@ -156,6 +165,19 @@ function applyRole(role) {
 function loadRole() {
   const role = localStorage.getItem(ROLE_KEY);
   return role === "admin" || role === "executor" ? role : "";
+}
+
+function loadExpandedIds() {
+  try {
+    const ids = JSON.parse(localStorage.getItem(EXPANDED_KEY) || "[]");
+    return new Set(Array.isArray(ids) ? ids : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveExpandedIds() {
+  localStorage.setItem(EXPANDED_KEY, JSON.stringify([...state.expandedIds]));
 }
 
 async function handleSubmit(event) {
@@ -255,7 +277,9 @@ function renderStatusTabs(summary = getBoardSummary(state.ideas)) {
 
 function renderIdeaCard(idea) {
   const card = document.createElement("article");
-  card.className = `idea-card status-${idea.status}`;
+  const isExpanded = state.expandedIds.has(idea.id);
+  card.className = `idea-card status-${idea.status}${isExpanded ? " is-expanded" : " is-collapsed"}`;
+  const preview = getIdeaPreview(idea);
 
   const link = idea.referenceUrl
     ? `<a class="reference-button" href="${escapeAttribute(idea.referenceUrl)}" target="_blank" rel="noreferrer">Открыть ссылку</a>`
@@ -263,15 +287,19 @@ function renderIdeaCard(idea) {
 
   card.innerHTML = `
     <div class="idea-card__header">
-      <div>
+      <button class="collapse-toggle" type="button" aria-expanded="${isExpanded}" aria-label="${isExpanded ? "Свернуть ТЗ" : "Развернуть ТЗ"}">
+        <span>&gt;</span>
+      </button>
+      <div class="idea-card__title">
         <h3>${escapeHtml(idea.title)}</h3>
+        ${preview ? `<p class="idea-preview">${escapeHtml(preview)}</p>` : ""}
       </div>
       <div class="badge-stack">
         <span class="badge">${escapeHtml(getStatusLabel(idea.status))}</span>
         ${idea.scaleRequested ? `<span class="badge scale-badge">Масштабируем</span>` : ""}
       </div>
     </div>
-    <div class="idea-card__body">
+    <div class="idea-card__body" ${isExpanded ? "" : "hidden"}>
       <div class="idea-card__text">
         <div class="meta-row">
           ${idea.track ? `<span>Трек: ${escapeHtml(idea.track)}</span>` : ""}
@@ -287,20 +315,29 @@ function renderIdeaCard(idea) {
     </div>
   `;
 
+  card.querySelector(".collapse-toggle").addEventListener("click", () => toggleIdeaExpanded(idea.id));
+
   if (idea.attachments.length) {
     const attachments = document.createElement("div");
     attachments.className = "attachments";
+    if (!isExpanded) attachments.hidden = true;
     for (const attachment of idea.attachments) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "attachment-button";
+      button.addEventListener("click", () => openImagePreview(attachment));
       const image = document.createElement("img");
       image.src = attachment.dataUrl;
       image.alt = attachment.name;
-      attachments.append(image);
+      button.append(image);
+      attachments.append(button);
     }
     card.append(attachments);
   }
 
   const actions = document.createElement("div");
   actions.className = "card-actions";
+  if (!isExpanded) actions.hidden = true;
   for (const status of STATUSES.filter((statusItem) => statusItem.id !== idea.status)) {
     const button = document.createElement("button");
     button.type = "button";
@@ -339,6 +376,21 @@ function renderIdeaCard(idea) {
   return card;
 }
 
+function getIdeaPreview(idea) {
+  const source = idea.notes || idea.script || idea.track || idea.referenceUrl;
+  return String(source || "").replace(/\s+/g, " ").trim().slice(0, 150);
+}
+
+function toggleIdeaExpanded(id) {
+  if (state.expandedIds.has(id)) {
+    state.expandedIds.delete(id);
+  } else {
+    state.expandedIds.add(id);
+  }
+  saveExpandedIds();
+  render();
+}
+
 async function setStatus(id, status) {
   state.ideas = state.ideas.map((idea) => (idea.id === id ? updateIdeaStatus(idea, status) : idea));
   await persistAndRender();
@@ -349,6 +401,18 @@ async function toggleScale(id) {
     idea.id === id ? updateIdea(idea, { scaleRequested: !idea.scaleRequested }) : idea
   );
   await persistAndRender();
+}
+
+function openImagePreview(attachment) {
+  elements.imageDialogPreview.src = attachment.dataUrl;
+  elements.imageDialogPreview.alt = attachment.name || "Раскадровка";
+  elements.imageDialog.showModal();
+}
+
+function closeImagePreview() {
+  elements.imageDialog.close();
+  elements.imageDialogPreview.removeAttribute("src");
+  elements.imageDialogPreview.alt = "";
 }
 
 async function deleteIdea(id) {
