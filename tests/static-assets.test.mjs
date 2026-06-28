@@ -45,7 +45,8 @@ test("app loads Supabase data through fast REST path", async () => {
   const publicApp = await readFile("public/app.js", "utf8");
 
   for (const source of [app, publicApp]) {
-    assert.match(source, /function fetchSupabaseRoom/);
+    assert.match(source, /function fetchSupabaseIdeas/);
+    assert.match(source, /function saveSupabaseLiteRoom/);
     assert.match(source, /\/rest\/v1\/rooms/);
     assert.match(source, /function resizeImageFile/);
   }

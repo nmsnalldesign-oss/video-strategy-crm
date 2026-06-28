@@ -12,7 +12,7 @@ import {
   shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
-} from "./app-core.mjs?v=storage-speed-20260629";
+} from "./app-core.mjs?v=storage-speed-2-20260629";
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
@@ -596,20 +596,37 @@ async function connectSupabaseIfReady() {
     setSyncState("Загружаем ТЗ...", false);
     let subscription = { unsubscribe: () => {} };
 
+    const applyRemoteIdeas = (remoteIdeas) => {
+      const resolved = resolveInitialCloudIdeas(state.ideas, remoteIdeas);
+      state.applyingRemote = true;
+      state.ideas = resolved.ideas;
+      saveLocalIdeas(state.ideas);
+      state.applyingRemote = false;
+      render();
+      return resolved;
+    };
+
     const loadRemote = async () => {
-      const data = await fetchSupabaseRoom();
-      const remoteIdeas = Array.isArray(data) ? data[0]?.ideas : data?.ideas;
+      const liteIdeas = await fetchSupabaseIdeas(getSupabaseLiteRoomId());
+      if (shouldAcceptRemoteIdeas(liteIdeas)) {
+        applyRemoteIdeas(liteIdeas);
+        state.loadingCloud = false;
+        setSyncState(`РћРЅР»Р°Р№РЅ: ${state.settings.roomId}`, true);
+        fetchSupabaseIdeas().then((fullIdeas) => {
+          if (shouldAcceptRemoteIdeas(fullIdeas)) {
+            applyRemoteIdeas(fullIdeas);
+            saveSupabaseLiteRoom(fullIdeas);
+          }
+        }).catch(() => {});
+        return;
+      }
+
+      const remoteIdeas = await fetchSupabaseIdeas();
 
       if (shouldAcceptRemoteIdeas(remoteIdeas)) {
-        const resolved = resolveInitialCloudIdeas(state.ideas, remoteIdeas);
-        state.applyingRemote = true;
-        state.ideas = resolved.ideas;
-        saveLocalIdeas(state.ideas);
-        state.applyingRemote = false;
-        render();
-        if (resolved.shouldSaveLocal) {
-          await state.cloud.save(state.ideas);
-        }
+        const resolved = applyRemoteIdeas(remoteIdeas);
+        await saveSupabaseLiteRoom(state.ideas);
+        if (resolved.shouldSaveLocal) await state.cloud.save(state.ideas);
       } else if (state.ideas.length) {
         await state.cloud.save(state.ideas);
       }
@@ -650,8 +667,8 @@ async function connectSupabaseIfReady() {
   }
 }
 
-async function fetchSupabaseRoom() {
-  const response = await fetch(`${getSupabaseRestUrl()}?id=eq.${encodeURIComponent(state.settings.roomId)}&select=ideas`, {
+async function fetchSupabaseIdeas(roomId = state.settings.roomId) {
+  const response = await fetch(`${getSupabaseRestUrl()}?id=eq.${encodeURIComponent(roomId)}&select=ideas`, {
     headers: getSupabaseHeaders()
   });
 
@@ -659,10 +676,21 @@ async function fetchSupabaseRoom() {
     throw new Error(await response.text() || `Supabase ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return Array.isArray(data) ? data[0]?.ideas : data?.ideas;
 }
 
 async function saveSupabaseRoom(ideas) {
+  await saveSupabaseRoomById(state.settings.roomId, ideas);
+  await saveSupabaseLiteRoom(ideas);
+}
+
+async function saveSupabaseLiteRoom(ideas) {
+  const lightweightIdeas = ideas.map((idea) => ({ ...idea, attachments: [] }));
+  await saveSupabaseRoomById(getSupabaseLiteRoomId(), lightweightIdeas);
+}
+
+async function saveSupabaseRoomById(roomId, ideas) {
   const response = await fetch(getSupabaseRestUrl(), {
     method: "POST",
     headers: {
@@ -671,7 +699,7 @@ async function saveSupabaseRoom(ideas) {
       Prefer: "resolution=merge-duplicates,return=minimal"
     },
     body: JSON.stringify({
-      id: state.settings.roomId,
+      id: roomId,
       ideas: ideas.map((idea) => ({ ...idea })),
       updated_at: new Date().toISOString()
     })
@@ -680,6 +708,10 @@ async function saveSupabaseRoom(ideas) {
   if (!response.ok) {
     throw new Error(await response.text() || `Supabase ${response.status}`);
   }
+}
+
+function getSupabaseLiteRoomId() {
+  return `${state.settings.roomId}-lite`;
 }
 
 function getSupabaseRestUrl() {
