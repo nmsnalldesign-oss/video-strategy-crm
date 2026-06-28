@@ -12,7 +12,7 @@ import {
   shouldAcceptRemoteIdeas,
   updateIdea,
   updateIdeaStatus
-} from "./app-core.mjs?v=storage-fix-20260619";
+} from "./app-core.mjs?v=storage-speed-20260629";
 
 const STORAGE_KEY = "content-crm-board";
 const SETTINGS_KEY = "content-crm-settings";
@@ -42,6 +42,7 @@ const state = {
   role: loadRole(),
   expandedIds: loadExpandedIds(),
   cloud: null,
+  loadingCloud: false,
   applyingRemote: false,
   settings: loadSettings()
 };
@@ -226,6 +227,14 @@ function render() {
   elements.successRate.textContent = `${summary.successRate}%`;
 
   elements.grid.replaceChildren();
+  if (!filtered.length && state.loadingCloud) {
+    const loading = document.createElement("div");
+    loading.className = "empty-state";
+    loading.innerHTML = "<h2>Загружаем ТЗ...</h2><p>Подтягиваю общую доску из облака. Если карточки уже были на этом телефоне, они появятся сразу из быстрого кэша.</p>";
+    elements.grid.append(loading);
+    return;
+  }
+
   if (!filtered.length) {
     elements.grid.append(elements.emptyTemplate.content.cloneNode(true));
     return;
@@ -448,12 +457,13 @@ function stopEditing() {
 }
 
 async function persistAndRender() {
-  saveLocalIdeas(state.ideas);
   render();
 
   if (state.cloud && !state.applyingRemote) {
     await state.cloud.save(state.ideas);
   }
+
+  saveLocalIdeas(state.ideas);
 }
 
 function loadLocalIdeas() {
@@ -468,8 +478,6 @@ function loadLocalIdeas() {
 }
 
 function saveLocalIdeas(ideas) {
-  if (safeSetLocalStorage(STORAGE_KEY, serializeBoard(ideas))) return;
-
   const lightweightIdeas = ideas.map((idea) => ({ ...idea, attachments: [] }));
   if (safeSetLocalStorage(STORAGE_KEY, serializeBoard(lightweightIdeas))) return;
 
@@ -533,6 +541,8 @@ async function connectCloudIfReady() {
 
   if (!state.settings.roomId) return;
   if (state.settings.provider === "supabase") {
+    state.loadingCloud = !state.ideas.length;
+    render();
     await connectSupabaseIfReady();
     return;
   }
@@ -583,15 +593,15 @@ async function connectSupabaseIfReady() {
   if (!state.settings.supabaseUrl || !state.settings.supabaseAnonKey) return;
 
   try {
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.45.4");
-    const client = createClient(state.settings.supabaseUrl, state.settings.supabaseAnonKey);
+    setSyncState("Загружаем ТЗ...", false);
+    let subscription = { unsubscribe: () => {} };
 
     const loadRemote = async () => {
-      const { data, error } = await client.from("rooms").select("ideas").eq("id", state.settings.roomId).maybeSingle();
-      if (error) throw error;
+      const data = await fetchSupabaseRoom();
+      const remoteIdeas = Array.isArray(data) ? data[0]?.ideas : data?.ideas;
 
-      if (shouldAcceptRemoteIdeas(data?.ideas)) {
-        const resolved = resolveInitialCloudIdeas(state.ideas, data.ideas);
+      if (shouldAcceptRemoteIdeas(remoteIdeas)) {
+        const resolved = resolveInitialCloudIdeas(state.ideas, remoteIdeas);
         state.applyingRemote = true;
         state.ideas = resolved.ideas;
         saveLocalIdeas(state.ideas);
@@ -606,17 +616,14 @@ async function connectSupabaseIfReady() {
     };
 
     state.cloud = {
-      save: async (ideas) => {
-        const { error } = await client
-          .from("rooms")
-          .upsert({ id: state.settings.roomId, ideas: ideas.map((idea) => ({ ...idea })), updated_at: new Date().toISOString() });
-        if (error) throw error;
-      },
+      save: saveSupabaseRoom,
       unsubscribe: () => subscription.unsubscribe()
     };
 
-    const channelName = `room-${state.settings.roomId}`;
-    const subscription = client
+    import("https://esm.sh/@supabase/supabase-js@2.45.4").then(({ createClient }) => {
+      const client = createClient(state.settings.supabaseUrl, state.settings.supabaseAnonKey);
+      const channelName = `room-${state.settings.roomId}`;
+      subscription = client
       .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${state.settings.roomId}` }, (payload) => {
         if (shouldAcceptRemoteIdeas(payload.new?.ideas)) {
@@ -627,14 +634,63 @@ async function connectSupabaseIfReady() {
           render();
         }
       })
-      .subscribe();
+        .subscribe();
+    }).catch(() => {
+      // Fast REST loading/saving still works if realtime is slow or blocked.
+    });
 
     await loadRemote();
+    state.loadingCloud = false;
     setSyncState(`Онлайн: ${state.settings.roomId}`, true);
   } catch (error) {
+    state.loadingCloud = false;
+    render();
     setSyncState("Ошибка Supabase", false);
     elements.settingsError.textContent = error.message;
   }
+}
+
+async function fetchSupabaseRoom() {
+  const response = await fetch(`${getSupabaseRestUrl()}?id=eq.${encodeURIComponent(state.settings.roomId)}&select=ideas`, {
+    headers: getSupabaseHeaders()
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text() || `Supabase ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function saveSupabaseRoom(ideas) {
+  const response = await fetch(getSupabaseRestUrl(), {
+    method: "POST",
+    headers: {
+      ...getSupabaseHeaders(),
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal"
+    },
+    body: JSON.stringify({
+      id: state.settings.roomId,
+      ideas: ideas.map((idea) => ({ ...idea })),
+      updated_at: new Date().toISOString()
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text() || `Supabase ${response.status}`);
+  }
+}
+
+function getSupabaseRestUrl() {
+  return `${state.settings.supabaseUrl.replace(/\/$/, "")}/rest/v1/rooms`;
+}
+
+function getSupabaseHeaders() {
+  return {
+    apikey: state.settings.supabaseAnonKey,
+    Authorization: `Bearer ${state.settings.supabaseAnonKey}`
+  };
 }
 
 function setSyncState(text, online) {
@@ -716,6 +772,7 @@ function renderProviderSettings() {
 
 function readAttachments(fileList) {
   const files = Array.from(fileList || []);
+  return Promise.all(files.map(readAttachment));
   return Promise.all(
     files.map(
       (file) =>
@@ -727,6 +784,55 @@ function readAttachments(fileList) {
         })
     )
   );
+}
+
+async function readAttachment(file) {
+  if (file.type.startsWith("image/")) {
+    try {
+      return { name: file.name, dataUrl: await resizeImageFile(file) };
+    } catch {
+      // Fall back to the original file if the browser cannot decode this image.
+    }
+  }
+
+  return { name: file.name, dataUrl: await readFileAsDataUrl(file) };
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(new Error(`РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕС‡РёС‚Р°С‚СЊ ${file.name}`)));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function resizeImageFile(file) {
+  const bitmap = await createImageBitmap(file);
+  const maxSide = 1200;
+  const ratio = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * ratio));
+  const height = Math.max(1, Math.round(bitmap.height * ratio));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close?.();
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Не удалось сжать изображение."));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.addEventListener("load", () => resolve(reader.result));
+      reader.addEventListener("error", () => reject(new Error(`РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕС‡РёС‚Р°С‚СЊ ${file.name}`)));
+      reader.readAsDataURL(blob);
+    }, "image/jpeg", 0.72);
+  });
 }
 
 function escapeHtml(value) {
